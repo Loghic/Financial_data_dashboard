@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketDataDashboard", "MarketDataDashboard\MarketDataDashboard.csproj", "{5BAFC09B-C7F8-46A9-9346-93A3D8EFE578}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketDataDashboard.Tests", "MarketDataDashboard.Tests\MarketDataDashboard.Tests.csproj", "{6FBE2C95-E394-4A70-B9A4-4C61C9F380DC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5BAFC09B-C7F8-46A9-9346-93A3D8EFE578}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BAFC09B-C7F8-46A9-9346-93A3D8EFE578}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BAFC09B-C7F8-46A9-9346-93A3D8EFE578}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BAFC09B-C7F8-46A9-9346-93A3D8EFE578}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6FBE2C95-E394-4A70-B9A4-4C61C9F380DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FBE2C95-E394-4A70-B9A4-4C61C9F380DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FBE2C95-E394-4A70-B9A4-4C61C9F380DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FBE2C95-E394-4A70-B9A4-4C61C9F380DC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
