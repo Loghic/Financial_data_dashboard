@@ -2,8 +2,9 @@ name: Generate PlantUML Diagrams
 
 on:
   push:
+    paths:
+      - 'docs/*.puml'
     branches: [ main ]
-  workflow_dispatch:  # Allows manual trigger
 
 jobs:
   generate:
@@ -11,15 +12,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Generate PNGs from PlantUML
-      uses: cloudbees/plantuml-github-action@master
-      with:
-        args: -v -tpng docs/*.puml
+    - name: Install PlantUML
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y plantuml
 
-    - name: Move PNGs to images folder
+    - name: Generate PNGs from PlantUML
       run: |
         mkdir -p docs/images
-        mv docs/*.png docs/images/
+        plantuml -tpng -o images docs/*.puml
 
     - name: Commit generated images
       run: |
