@@ -322,4 +322,4 @@ pip install numpy scikit-learn
 ## Author
 
 **Matej Michalek**
-CTU FNSPE - Programming in C#
+CTU FNSPE - Course: Programming in C#
