@@ -32,30 +32,7 @@ The application demonstrates real-world software engineering practices such as a
 
 The application is structured into clearly separated layers:
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                   Presentation Layer                    │
-│              (Razor Pages, Chart.js, DataTables)        │
-├─────────────────────────────────────────────────────────┤
-│                  Application Services                   │
-│  ┌─────────────┐ ┌─────────────────┐ ┌───────────────┐  │
-│  │StockService │ │StockDataService │ │PredictionSvc  │  │
-│  │  (API)      │ │  (Orchestrator) │ │  (Singleton)  │  │
-│  └─────────────┘ └─────────────────┘ └───────────────┘  │
-├─────────────────────────────────────────────────────────┤
-│                   Data Access Layer                     │
-│         StockContext (Entity Framework Core)            │
-├─────────────────────────────────────────────────────────┤
-│                    SQLite Database                      │
-│              (Stocks, PricePoints tables)               │
-└─────────────────────────────────────────────────────────┘
-          │                                    │
-          ▼                                    ▼
-   ┌──────────────┐                   ┌──────────────────┐
-   │ Alpha Vantage│                   │ Python Script    │
-   │     API      │                   │ (predict.py)     │
-   └──────────────┘                   └──────────────────┘
-```
+![Architecture](docs/images/architecture.png)
 
 ### Key Architectural Decisions
 
@@ -66,6 +43,12 @@ The application is structured into clearly separated layers:
 3. **Fire-and-Forget with Polling**: Predictions run asynchronously; the UI polls for results every 500ms.
 
 4. **Client-Side Chart Management**: Chart instances and data maps stored globally in JavaScript for dynamic updates.
+
+---
+
+## Class Diagram
+
+![Class Diagram](docs/images/class-diagram.png)
 
 ---
 
@@ -151,6 +134,10 @@ dotnet test
 | **StockDataService** | 7 | Database operations, incremental updates, case sensitivity |
 | **PredictionService** | 6 | Future date generation, business day logic, state management |
 
+### Test Architecture
+
+![Test Architecture](docs/images/test-architecture.png)
+
 ### Testing Approach
 
 - **Unit Tests**: Pure function testing for technical indicators and helpers
@@ -184,48 +171,33 @@ The application includes a dedicated **Analytical Indicators** page accessible f
 - Lazy-loaded mini charts (rendered on accordion open)
 - Markdown descriptions converted to HTML at runtime
 
+### Indicator Visualization Sequence
+
+![Indicator Sequence](docs/images/sequence-indicators.png)
+
 ---
 
 ## Prediction Module
 
 The prediction module demonstrates **cross-language integration** between C# and Python.
 
-### Architecture
-```
-User clicks "Generate Prediction"
-         │
-         ▼
-┌─────────────────────────────────────────────┐
-│  POST /Index?handler=Predict                │
-│  └─> PredictionService.StartPrediction()    │
-│      └─> Task.Run (background)              │
-│          └─> Process.Start(python)          │
-│              └─> predict.py (stdin/stdout)  │
-│          └─> Store in ConcurrentDictionary  │
-└─────────────────────────────────────────────┘
-         │
-         ▼ (immediate response)
-┌─────────────────────────────────────────────┐
-│  JavaScript polling (every 500ms)           │
-│  GET /?handler=PredictionResult&symbol=...  │
-│  └─> Returns null until prediction ready    │
-│  └─> Returns {predictedValues, futureDates} │
-└─────────────────────────────────────────────┘
-         │
-         ▼
-┌─────────────────────────────────────────────┐
-│  Chart updated with future dates            │
-│  - X-axis extended with business days       │
-│  - Prediction shown as dashed pink line     │
-│  - Historical indicators padded with nulls  │
-└─────────────────────────────────────────────┘
-```
+### Prediction Workflow
+
+![Prediction Sequence](docs/images/sequence-prediction.png)
 
 ### Features
 - **Non-blocking**: UI remains responsive during prediction
 - **Visual feedback**: Spinner shown during processing
 - **Future dates**: Automatically generates business days (skips weekends)
 - **Chart integration**: Prediction line extends beyond historical data
+
+---
+
+## Stock Data Update
+
+### Update Sequence
+
+![Update Sequence](docs/images/sequence-update.png)
 
 ---
 
@@ -241,12 +213,14 @@ User clicks "Generate Prediction"
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd MarketDataDashboard
+   git clone https://github.com/Loghic/Financial_data_dashboard.git
+   cd Financial_data_dashboard
    ```
 
 2. **Configure API key** using .NET User Secrets:
    ```bash
+   cd src/MarketDataDashboard
+
    # Initialize user secrets (only needed once)
    dotnet user-secrets init
 
@@ -304,6 +278,21 @@ pip install numpy scikit-learn
 
 ---
 
+## UML Diagrams
+
+All UML diagrams are available in the `docs/` folder:
+
+| Diagram | Description |
+|---------|-------------|
+| [architecture.puml](docs/architecture.puml) | High-level system architecture |
+| [class-diagram.puml](docs/class-diagram.puml) | Core classes and relationships |
+| [sequence-prediction.puml](docs/sequence-prediction.puml) | Prediction workflow |
+| [sequence-update.puml](docs/sequence-update.puml) | Data update workflow |
+| [sequence-indicators.puml](docs/sequence-indicators.puml) | Indicator visualization |
+| [test-architecture.puml](docs/test-architecture.puml) | Test structure |
+
+---
+
 ## Future Improvements
 
 - [ ] Support for additional financial instruments (ETFs, indices)
@@ -316,6 +305,12 @@ pip install numpy scikit-learn
 - [ ] User authentication and watchlists
 - [ ] Docker containerization
 - [x] CI/CD pipeline with GitHub Actions
+
+---
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ---
 
