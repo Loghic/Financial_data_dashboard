@@ -171,12 +171,6 @@ The application includes a dedicated **Analytical Indicators** page accessible f
 - Lazy-loaded mini charts (rendered on accordion open)
 - Markdown descriptions converted to HTML at runtime
 
-### Indicator Visualization Sequence
-
-![Indicator Sequence](docs/images/sequence-indicators.png)
-
----
-
 ## Prediction Module
 
 The prediction module demonstrates **cross-language integration** between C# and Python.
