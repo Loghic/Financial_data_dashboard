@@ -1,6 +1,6 @@
 # Market Data Dashboard
 
-![.NET Build & Test](https://github.com/Loghic/FJFI-school/actions/workflows/dotnet.yml/badge.svg)
+![.NET Build & Test](https://github.com/Loghic/Financial_data_dashboard/actions/workflows/dotnet.yml/badge.svg)
 
 **Market Data Dashboard** is a **web application** built in **C# (ASP.NET Core)** that allows users to download, store, visualize, and analyze historical stock market data.
 The application demonstrates real-world software engineering practices such as asynchronous data processing, local data persistence, external service integration, modular analytics, and clean architectural separation.
