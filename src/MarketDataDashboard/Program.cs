@@ -49,5 +49,6 @@ app.MapStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();
 
+// Main app loop
 app.Run();
 
