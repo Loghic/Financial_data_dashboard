@@ -1,0 +1,76 @@
+@startuml test-architecture
+title Test Architecture
+
+skinparam packageStyle rectangle
+
+package "MarketDataDashboard (SUT)" {
+  class TechnicalIndicators <<static>>
+  class CsvExporter <<static>>
+  interface IStockService <<interface>>
+  class StockService
+  class StockDataService
+  class PredictionService
+  class StockContext <<DbContext>>
+
+  StockService ..|> IStockService
+  StockDataService --> IStockService
+  StockDataService --> StockContext
+}
+
+package "MarketDataDashboard.Tests" {
+  class TechnicalIndicatorsTests {
+    +SMA_WithValidData_ReturnsCorrectAverage()
+    +EMA_FirstValue_EqualsSMA()
+    +RSI_WithValidData_ReturnsBoundedValues()
+    +BollingerBands_UpperAboveLower()
+    +MACD_ReturnsCorrectLength()
+  }
+
+  class CsvExporterTests {
+    +Export_WithValidData_ContainsHeader()
+    +Export_UsesInvariantCulture()
+    +Export_WithEmptyData_ReturnsOnlyHeader()
+  }
+
+  class StockDataServiceTests {
+    +GetFromDatabaseAsync_WithExistingData_ReturnsOrderedByDate()
+    +GetFromDatabaseAsync_IsCaseInsensitive()
+    +UpdateFromApiAsync_WithNewStock_CreatesStock()
+    +UpdateFromApiAsync_OnlyAddsNewDates()
+  }
+
+  class PredictionServiceTests {
+    +GenerateFutureDates_SkipsWeekends()
+    +GetNextBusinessDay_FromFriday_ReturnsMonday()
+    +TryGetPrediction_BeforeCompletion_ReturnsFalse()
+  }
+}
+
+package "Test Infrastructure" {
+  class "Mock<IStockService>" as MockStock <<Moq>>
+  class "InMemoryDatabase" as InMemoryDb <<EF Core>>
+  class "xUnit" as XUnit <<Framework>>
+}
+
+' Test relationships
+TechnicalIndicatorsTests ..> TechnicalIndicators : tests
+CsvExporterTests ..> CsvExporter : tests
+StockDataServiceTests ..> StockDataService : tests
+StockDataServiceTests ..> MockStock : uses mock
+StockDataServiceTests ..> InMemoryDb : uses
+PredictionServiceTests ..> PredictionService : tests
+PredictionServiceTests ..> InMemoryDb : uses
+
+note bottom of MockStock
+  Moq mocks IStockService
+  to isolate StockDataService
+  from external API
+end note
+
+note bottom of InMemoryDb
+  EF Core InMemory provider
+  replaces SQLite for fast,
+  isolated database tests
+end note
+
+@enduml

@@ -1,0 +1,150 @@
+# =============================================================================
+# .NET / ASP.NET Core
+# =============================================================================
+
+# Build results
+bin/
+obj/
+out/
+
+# NuGet packages
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Visual Studio
+.vs/
+*.rsuser
+*.sln.ide/
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+# Visual Studio for Mac
+*.userprefs
+
+# Build artifacts
+publish/
+artifacts/
+
+# =============================================================================
+# ASP.NET Core specific
+# =============================================================================
+
+# Secret files (API keys, connection strings)
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+
+# Data Protection keys
+**/DataProtection-Keys/
+
+# =============================================================================
+# Database
+# =============================================================================
+
+# SQLite database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# =============================================================================
+# Python
+# =============================================================================
+
+# Virtual environment
+python/venv/
+venv/
+.venv/
+ENV/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# =============================================================================
+# OS generated files
+# =============================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+
+# =============================================================================
+# Logs and temporary files
+# =============================================================================
+
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# =============================================================================
+# Test results
+# =============================================================================
+
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# =============================================================================
+# wwwroot - Keep most files, ignore generated/vendor bundles if any
+# =============================================================================
+
+# Uncomment if you use bundling tools
+wwwroot/dist/
+wwwroot/lib/
+
+# =============================================================================
+# DO NOT IGNORE (keep these in git)
+# =============================================================================
+
+# Properties/          - Keep (launchSettings.json needed for dev)
+# Migrations/          - Keep (EF Core schema history - critical!)
+# wwwroot/             - Keep (static files)
+
+# =============================================================================
+# Optional: Keep these if you want to track them
+# =============================================================================
+
+# Uncomment to ignore generated UML images (keep .puml source files)
+# docs/images/*.png
+# docs/images/*.svg

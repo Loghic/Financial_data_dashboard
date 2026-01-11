@@ -1,0 +1,94 @@
+@startuml class-diagram
+title Market Data Dashboard - Core Class Diagram
+
+' Entities
+class Stock {
+  +Id : int
+  +Symbol : string
+  +Name : string
+}
+
+class PricePoint {
+  +Id : int
+  +Date : DateTime
+  +Open : decimal
+  +High : decimal
+  +Low : decimal
+  +Close : decimal
+  +Volume : long
+  +StockId : int
+  +Stock : Stock?
+}
+
+class PredictionInput {
+  +Symbol : string
+  +Dates : List<DateTime>
+  +ClosePrices : List<decimal>
+}
+
+class PredictionResult {
+  +Symbol : string
+  +Dates : List<DateTime>
+  +PredictedValues : List<decimal>
+}
+
+' Services
+class StockService {
+  -_http : HttpClient
+  -_apiKey : string
+  +GetStockDataAsync(symbol) : Task<List<PricePoint>>
+}
+
+class StockDataService <<Scoped>> {
+  -_api : StockService
+  -_db : StockContext
+  +UpdateFromApiAsync(symbol) : Task
+  +GetFromDatabaseAsync(symbol) : Task<List<PricePoint>>
+}
+
+class PredictionService <<Singleton>> {
+  -_scopeFactory : IServiceScopeFactory
+  -_completed : ConcurrentDictionary<string, PredictionResult>
+  +StartPrediction(symbol) : void
+  +TryGetPrediction(symbol, out result) : bool
+  -RunPredictionProcessAsync(symbol) : Task<PredictionResult>
+  -GenerateFutureDates(lastDate, count) : List<DateTime>
+}
+
+class TechnicalIndicators <<static>> {
+  +{static} SMA(data, period) : List<decimal?>
+  +{static} EMA(data, period) : List<decimal?>
+  +{static} RSI(data, period) : List<decimal?>
+  +{static} BollingerBands(data, period, multiplier)
+  +{static} MACD(data)
+}
+
+class StockContext <<DbContext>> {
+  +Stocks : DbSet<Stock>
+  +PricePoints : DbSet<PricePoint>
+}
+
+class CsvExporter <<static>> {
+  +{static} Export(data) : string
+}
+
+class IndexModel <<PageModel>> {
+  +StocksData : Dictionary<string, List<PricePoint>>
+  +OnGetAsync(symbol) : Task
+  +OnPostUpdateAsync(symbol) : Task<IActionResult>
+  +OnGetDownloadAsync(symbol) : Task<IActionResult>
+  +OnPostPredictAsync(symbol) : Task<IActionResult>
+  +OnGetPredictionResult(symbol) : IActionResult
+}
+
+' Relationships
+Stock "1" --> "*" PricePoint
+StockDataService --> StockService
+StockDataService --> StockContext
+PredictionService ..> StockDataService : resolves via scope
+PredictionService --> PredictionResult
+IndexModel --> StockDataService
+IndexModel --> PredictionService
+IndexModel --> TechnicalIndicators
+TechnicalIndicators ..> PricePoint
+@enduml

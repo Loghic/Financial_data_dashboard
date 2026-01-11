@@ -1,0 +1,415 @@
+﻿@page
+@model MarketDataDashboard.Pages.IndexModel
+@{
+    ViewData["Title"] = "Market Data Dashboard";
+}
+
+<h1>Stock Prices</h1>
+<ul class="nav nav-tabs mb-3" id="stockTabs" role="tablist">
+    @for (int i = 0; i < Model.StockSymbols.Count; i++)
+    {
+        var symbol = Model.StockSymbols[i];
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(Model.ActiveSymbol == symbol ? "active" : "")"
+                    id="tab-@symbol"
+                    data-bs-toggle="tab"
+                    data-bs-target="#content-@symbol"
+                    type="button" role="tab">
+                @symbol
+            </button>
+        </li>
+    }
+</ul>
+
+<div class="tab-content">
+    @for (int i = 0; i < Model.StockSymbols.Count; i++)
+    {
+        var symbol = Model.StockSymbols[i];
+        <div class="tab-pane fade @(Model.ActiveSymbol == symbol ? "show active" : "")"
+             id="content-@symbol" role="tabpanel">
+
+            <div class="mb-2">
+                <form method="post" asp-page-handler="Update" class="d-inline">
+                    <input type="hidden" name="symbol" value="@symbol" />
+                    <button class="btn btn-primary btn-sm" type="submit">Update Data</button>
+                </form>
+                <a class="btn btn-secondary btn-sm d-inline"
+                   asp-page-handler="Download"
+                   asp-route-symbol="@symbol">
+                   Download CSV
+                </a>
+                <form method="post" asp-page="Index" asp-page-handler="Predict" class="d-inline" id="predict-form-@symbol">
+                    <input type="hidden" name="symbol" value="@symbol" />
+                    @Html.AntiForgeryToken()
+                    <button id="predict-btn-@symbol" class="btn btn-warning btn-sm" type="button" onclick="startPrediction('@symbol')">Generate Prediction</button>
+                </form>
+                <span id="prediction-spinner-@symbol" class="ms-2" style="display:none;">⏳ Generating...</span>
+            </div>
+
+            <h2>Stock Price Evolution</h2>
+            <div class="mb-2">
+                <label>Select Indicators:</label>
+                <div class="d-grid gap-2 d-md-flex flex-wrap" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));">
+                  @foreach (var indicator in new string[] { "Open", "Close", "High", "Low", "SMA10", "SMA20", "SMA50", "SMA100", "EMA10", "EMA20", "EMA50", "RSI7", "RSI14", "BBUpper", "BBLower", "MACD", "MACDSignal", "Prediction" })
+                  {
+                      var isPrediction = indicator == "Prediction";
+                      <div class="form-check me-3">
+                          <input class="form-check-input indicator-checkbox"
+                                 type="checkbox"
+                                 id="@($"{symbol}_{indicator}")"
+                                 data-indicator="@indicator"
+                                 @(indicator == "Close" ? "checked" : "")
+                                 @(isPrediction ? "disabled" : "") />
+                          <label class="form-check-label" for="@($"{symbol}_{indicator}")">@indicator</label>
+                      </div>
+                  }
+                </div>
+            </div>
+
+            <div style="width: 100%; height: 400px;">
+                <canvas id="chart-@symbol"></canvas>
+            </div>
+            <button id="downloadChartBtn-@symbol" class="btn btn-success mb-3">Download Chart</button>
+
+            <table id="stocksTable-@symbol" class="table table-sm mt-2">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Open</th>
+                        <th>High</th>
+                        <th>Low</th>
+                        <th>Close</th>
+                        <th>Volume</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.StocksData[symbol])
+                    {
+                        <tr>
+                            <td data-order="@p.Date.ToString("yyyy-MM-dd")">@p.Date.ToString("dd.MM. yyyy")</td>
+                            <td>@p.Open.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td>@p.High.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td>@p.Low.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td>@p.Close.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td>@p.Volume.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+<script>
+const stocksData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksData));
+const stocksSMA10 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksSMA10));
+const stocksSMA20 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksSMA20));
+const stocksSMA50 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksSMA50));
+const stocksSMA100 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksSMA100));
+const stocksEMA10 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksEMA10));
+const stocksEMA20 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksEMA20));
+const stocksEMA50 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksEMA50));
+const stocksRSI7 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksRSI7));
+const stocksRSI14 = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksRSI14));
+const stocksBBUpper = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksBBUpper));
+const stocksBBLower = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksBBLower));
+const stocksMACD = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksMACD));
+const stocksMACDSignal = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.StocksMACDSignal));
+
+// Store chart instances and their data maps
+const chartInstances = {};
+const chartDataMaps = {};
+const chartLabels = {};
+
+function getSelectedIndicators(symbol) {
+    return Array.from(document.querySelectorAll(`#content-${symbol} .indicator-checkbox:checked`))
+                .map(cb => cb.dataset.indicator);
+}
+
+const colors = {
+    Open: 'blue', Close: 'green', High: 'red', Low: 'orange',
+    SMA10: 'purple', SMA20: 'teal', SMA50: 'magenta', SMA100: 'brown',
+    EMA10: 'darkblue', EMA20: 'darkgreen', EMA50: 'darkred',
+    RSI7: 'pink', RSI14: 'lightgreen', BBUpper: 'gray', BBLower: 'gray',
+    MACD: 'black', MACDSignal: 'yellow', Prediction: 'deeppink'
+};
+
+// Helper: add business days to a date
+function addBusinessDays(dateStr, days) {
+    const date = new Date(dateStr);
+    let added = 0;
+    while (added < days) {
+        date.setDate(date.getDate() + 1);
+        const dayOfWeek = date.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip weekends
+            added++;
+        }
+    }
+    return date.toISOString().split('T')[0];
+}
+
+function startPrediction(symbol) {
+    const checkbox = document.getElementById(`${symbol}_Prediction`);
+    const spinner = document.getElementById(`prediction-spinner-${symbol}`);
+    const btn = document.getElementById(`predict-btn-${symbol}`);
+    const form = document.getElementById(`predict-form-${symbol}`);
+
+    if (!checkbox || !spinner || !btn || !form) {
+        console.error("Missing elements for symbol:", symbol);
+        return;
+    }
+
+    spinner.style.display = "inline";
+    btn.disabled = true;
+    checkbox.disabled = true;
+    checkbox.checked = false;
+
+    const formData = new FormData(form);
+    const actionUrl = form.action;
+
+    fetch(actionUrl, {
+        method: 'POST',
+        body: formData,
+        credentials: 'same-origin',
+        headers: {
+            'RequestVerificationToken': form.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+        pollPrediction(symbol, btn, spinner, checkbox);
+    })
+    .catch(err => {
+        console.error("Prediction error:", err);
+        spinner.style.display = "none";
+        btn.disabled = false;
+        checkbox.disabled = true;
+        alert("Failed to start prediction. Please try again.");
+    });
+}
+
+function pollPrediction(symbol, btn, spinner, checkbox) {
+    let pollCount = 0;
+    const maxPolls = 240; // 2 minutes
+
+    const interval = setInterval(async () => {
+        pollCount++;
+
+        if (pollCount > maxPolls) {
+            clearInterval(interval);
+            spinner.style.display = "none";
+            btn.disabled = false;
+            checkbox.disabled = true;
+            alert("Prediction timed out. Please try again.");
+            return;
+        }
+
+        try {
+            const response = await fetch(`?handler=PredictionResult&symbol=${encodeURIComponent(symbol)}`);
+            if (!response.ok) return;
+
+            const result = await response.json();
+
+            // Check if we have prediction data with future dates
+            if (result && result.predictedValues && result.predictedValues.length > 0) {
+                clearInterval(interval);
+                spinner.style.display = "none";
+                btn.disabled = false;
+                checkbox.disabled = false;
+                checkbox.checked = true;
+
+                // Update chart with prediction data including future dates
+                updateChartWithPrediction(symbol, result);
+            }
+        } catch (err) {
+            console.error("Polling error:", err);
+        }
+    }, 500);
+}
+
+function updateChartWithPrediction(symbol, predictionResult) {
+    const chart = chartInstances[symbol];
+    const dataMap = chartDataMaps[symbol];
+    let labels = chartLabels[symbol];
+
+    if (!chart || !dataMap || !labels) {
+        console.error("Chart not initialized for", symbol);
+        return;
+    }
+
+    const futureDates = predictionResult.futureDates || [];
+    const predictedValues = predictionResult.predictedValues || [];
+
+    // Build prediction array: nulls for historical dates, then predicted values
+    const historicalLength = labels.length;
+    const predictionData = Array(historicalLength).fill(null);
+
+    // Add future dates to labels and prediction values
+    if (futureDates.length > 0) {
+        // Extend labels with future dates
+        const newLabels = [...labels, ...futureDates];
+        chartLabels[symbol] = newLabels;
+        chart.data.labels = newLabels;
+
+        // Extend all existing data series with nulls for future dates
+        for (const key of Object.keys(dataMap)) {
+            if (key !== 'Prediction') {
+                const padding = Array(futureDates.length).fill(null);
+                dataMap[key] = [...dataMap[key], ...padding];
+            }
+        }
+
+        // Prediction: nulls for all historical, then the predicted values
+        dataMap['Prediction'] = [...predictionData, ...predictedValues];
+    } else {
+        // Fallback: overlay on last N days (old behavior)
+        const startIdx = Math.max(0, historicalLength - predictedValues.length);
+        for (let i = 0; i < predictedValues.length; i++) {
+            predictionData[startIdx + i] = predictedValues[i];
+        }
+        dataMap['Prediction'] = predictionData;
+    }
+
+    // Rebuild datasets based on current checkbox selection
+    rebuildChart(symbol);
+}
+
+function rebuildChart(symbol) {
+    const chart = chartInstances[symbol];
+    const dataMap = chartDataMaps[symbol];
+    const labels = chartLabels[symbol];
+
+    if (!chart || !dataMap) return;
+
+    const selected = getSelectedIndicators(symbol);
+
+    chart.data.labels = labels;
+    chart.data.datasets = selected.map(key => ({
+        label: key,
+        data: dataMap[key] || [],
+        borderColor: colors[key] || 'black',
+        fill: false,
+        tension: 0.1,
+        borderDash: key === "Prediction" ? [5, 5] : [],
+        borderWidth: key === "Prediction" ? 3 : 2
+    }));
+
+    chart.update();
+}
+
+function initChart(symbol) {
+    if (chartInstances[symbol]) return;
+
+    const points = stocksData[symbol];
+    const labels = points.map(p => p.Date.split('T')[0]);
+    chartLabels[symbol] = [...labels]; // Store a copy
+
+    const dataMap = {
+        Open: points.map(p => p.Open),
+        Close: points.map(p => p.Close),
+        High: points.map(p => p.High),
+        Low: points.map(p => p.Low),
+        SMA10: stocksSMA10[symbol] || [],
+        SMA20: stocksSMA20[symbol] || [],
+        SMA50: stocksSMA50[symbol] || [],
+        SMA100: stocksSMA100[symbol] || [],
+        EMA10: stocksEMA10[symbol] || [],
+        EMA20: stocksEMA20[symbol] || [],
+        EMA50: stocksEMA50[symbol] || [],
+        RSI7: stocksRSI7[symbol] || [],
+        RSI14: stocksRSI14[symbol] || [],
+        BBUpper: stocksBBUpper[symbol] || [],
+        BBLower: stocksBBLower[symbol] || [],
+        MACD: stocksMACD[symbol] || [],
+        MACDSignal: stocksMACDSignal[symbol] || [],
+        Prediction: Array(labels.length).fill(null) // Initially empty
+    };
+    chartDataMaps[symbol] = dataMap;
+
+    const selectedOptions = getSelectedIndicators(symbol);
+    const datasets = selectedOptions.map(key => ({
+        label: key,
+        data: dataMap[key] || [],
+        borderColor: colors[key] || 'black',
+        fill: false,
+        tension: 0.1,
+        borderDash: key === "Prediction" ? [5, 5] : []
+    }));
+
+    const canvas = document.getElementById(`chart-${symbol}`);
+    const ctx = canvas.getContext('2d');
+
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: [...labels], datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: items => items[0]?.label?.split('-').reverse().join('.') || ''
+                    }
+                },
+                title: { display: true, text: `${symbol} Price Evolution` },
+                zoom: {
+                    pan: { enabled: true, mode: 'x' },
+                    zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+                }
+            },
+            scales: {
+                x: { display: true, title: { display: true, text: 'Date' } },
+                y: { display: true, title: { display: true, text: 'Price (USD)' } }
+            }
+        }
+    });
+
+    chartInstances[symbol] = chart;
+
+    // Update chart when checkboxes change
+    document.querySelectorAll(`#content-${symbol} .indicator-checkbox`).forEach(cb => {
+        cb.addEventListener('change', () => rebuildChart(symbol));
+    });
+
+    // Chart download
+    document.getElementById(`downloadChartBtn-${symbol}`).addEventListener('click', () => {
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${symbol}-PriceChart.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    });
+}
+
+// Initialize chart for active tab
+const activeTab = document.querySelector('#stockTabs button.active');
+if (activeTab) setTimeout(() => initChart(activeTab.id.replace('tab-', '')), 100);
+
+// Initialize charts on tab change
+document.querySelectorAll('#stockTabs button[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', (event) => {
+        const symbol = event.target.id.replace('tab-', '');
+        setTimeout(() => initChart(symbol), 50);
+    });
+});
+
+// Initialize DataTables
+$(document).ready(function() {
+    @foreach (var symbol in Model.StockSymbols) {
+        <text>
+        $('#stocksTable-@symbol').DataTable({ "order": [[0, "desc"]], "pageLength": 10, "lengthChange": false });
+        </text>
+    }
+});
+</script>
+}

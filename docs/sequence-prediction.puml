@@ -1,0 +1,39 @@
+@startuml sequence-prediction
+title Prediction Workflow Sequence
+
+actor User
+participant "Browser\n(JavaScript)" as Browser
+participant "IndexModel" as Page
+participant "PredictionService\n(Singleton)" as PredSvc
+participant "StockDataService" as DataSvc
+participant "Python" as Python
+
+User -> Browser : Click "Generate Prediction"
+Browser -> Browser : Show spinner, disable controls
+
+Browser -> Page : POST ?handler=Predict
+Page -> PredSvc : StartPrediction(symbol)
+PredSvc -> PredSvc : Task.Run (background)
+Page --> Browser : 302 Redirect
+
+Browser -> Browser : Start polling (500ms)
+
+== Background ==
+PredSvc -> DataSvc : GetFromDatabaseAsync()
+DataSvc --> PredSvc : Historical data
+PredSvc -> Python : stdin: JSON
+Python --> PredSvc : stdout: predictions
+PredSvc -> PredSvc : GenerateFutureDates()
+PredSvc -> PredSvc : Store in _completed
+
+== Polling ==
+loop Until ready
+  Browser -> Page : GET ?handler=PredictionResult
+  Page -> PredSvc : TryGetPrediction()
+  PredSvc --> Page : result (or null)
+  Page --> Browser : JSON
+end
+
+Browser -> Browser : Update chart with future dates
+Browser --> User : Show prediction line
+@enduml

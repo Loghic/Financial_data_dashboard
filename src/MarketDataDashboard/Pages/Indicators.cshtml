@@ -1,0 +1,201 @@
+@page
+@model MarketDataDashboard.Pages.IndicatorsModel
+@using Markdig
+
+@{
+    ViewData["Title"] = "Analytical Indicators";
+}
+
+<h1>Analytical Indicators</h1>
+<p>
+    Here you can find descriptions, usage tips, and visual examples for all the analytical indicators used in the dashboard.
+</p>
+
+<div class="accordion" id="indicatorsAccordion">
+@foreach (var indicator in Model.IndicatorsInfo)
+{
+    var safeKey = indicator.Key.Replace(" ", "-");
+
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="heading-@safeKey">
+            <button class="accordion-button collapsed"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapse-@safeKey"
+                    aria-expanded="false"
+                    aria-controls="collapse-@safeKey"
+                    data-indicator="@indicator.Key">
+                @indicator.Key
+            </button>
+        </h2>
+
+        <div id="collapse-@safeKey"
+             class="accordion-collapse collapse"
+             aria-labelledby="heading-@safeKey"
+             data-bs-parent="#indicatorsAccordion">
+
+            <div class="accordion-body">
+                <div class="mb-3">
+                    @Html.Raw(Markdown.ToHtml(indicator.Value))
+                </div>
+
+                <div style="width:100%; height:150px;">
+                    <canvas id="miniChart-@safeKey"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const samplePrices = [10,12,9,14,13,15,16,14,18,17,19,21,20];
+
+// ---------- Indicator Calculations ----------
+function generateSMA(prices, period) {
+    return prices.map((_, i) =>
+        i < period - 1
+            ? null
+            : prices.slice(i - period + 1, i + 1)
+                    .reduce((a, b) => a + b, 0) / period
+    );
+}
+
+function generateEMA(prices, period) {
+    const k = 2 / (period + 1);
+    let ema = prices[0];
+    return prices.map(p => (ema = p * k + ema * (1 - k)));
+}
+
+function generateRSI(prices, period) {
+    let gains = 0, losses = 0;
+    return prices.map((p, i) => {
+        if (i === 0) return 50;
+        const diff = p - prices[i - 1];
+        gains = diff > 0 ? diff : 0;
+        losses = diff < 0 ? -diff : 0;
+        const rs = gains / (losses || 1);
+        return 100 - 100 / (1 + rs);
+    });
+}
+
+function generateBollinger(prices, period = 5) {
+    const sma = generateSMA(prices, period);
+    const upper = [], lower = [];
+
+    prices.forEach((_, i) => {
+        if (i < period - 1) {
+            upper.push(null);
+            lower.push(null);
+            return;
+        }
+
+        const slice = prices.slice(i - period + 1, i + 1);
+        const mean = sma[i];
+        const variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / period;
+        const sd = Math.sqrt(variance);
+
+        upper.push(mean + 2 * sd);
+        lower.push(mean - 2 * sd);
+    });
+
+    return { sma, upper, lower };
+}
+
+// ---------- Chart Definitions ----------
+const indicatorCharts = {
+    "SMA": ctx => new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: samplePrices.map((_, i) => i + 1),
+            datasets: [
+                { label: "Price", data: samplePrices, borderColor: "blue" },
+                { label: "SMA", data: generateSMA(samplePrices, 5), borderColor: "purple" }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    }),
+
+    "EMA": ctx => new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: samplePrices.map((_, i) => i + 1),
+            datasets: [
+                { label: "Price", data: samplePrices, borderColor: "blue" },
+                { label: "EMA", data: generateEMA(samplePrices, 5), borderColor: "green" }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    }),
+
+    "RSI": ctx => new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: samplePrices.map((_, i) => i + 1),
+            datasets: [
+                { label: "RSI", data: generateRSI(samplePrices, 7), borderColor: "orange" }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { min: 0, max: 100 } }
+        }
+    }),
+
+    "Bollinger Bands": ctx => {
+        const b = generateBollinger(samplePrices);
+        new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: samplePrices.map((_, i) => i + 1),
+                datasets: [
+                    { label: "Price", data: samplePrices, borderColor: "blue" },
+                    { label: "Upper", data: b.upper, borderColor: "red", borderDash: [5,5] },
+                    { label: "Lower", data: b.lower, borderColor: "red", borderDash: [5,5] },
+                    { label: "SMA", data: b.sma, borderColor: "purple" }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    },
+
+    "MACD": ctx => {
+        const macd = generateEMA(samplePrices, 3)
+            .map((v, i) => v - generateEMA(samplePrices, 6)[i]);
+
+        new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: samplePrices.map((_, i) => i + 1),
+                datasets: [{ label: "MACD", data: macd, borderColor: "black" }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+};
+
+// ---------- Lazy Render on Open ----------
+document.querySelectorAll(".accordion-collapse").forEach(collapse => {
+    collapse.addEventListener("shown.bs.collapse", () => {
+        const headerId = collapse.getAttribute("aria-labelledby");
+        const button = document.querySelector(`#${headerId} .accordion-button`);
+        const indicator = button.dataset.indicator;
+        const safeId = indicator.replace(/\s/g, "-");
+
+        const canvas = document.getElementById(`miniChart-${safeId}`);
+        if (!canvas || canvas.dataset.rendered) return;
+
+        const chartFn = indicatorCharts[indicator];
+        if (chartFn) {
+            chartFn(canvas.getContext("2d"));
+            canvas.dataset.rendered = "true";
+        }
+    });
+});
+</script>
+}
+

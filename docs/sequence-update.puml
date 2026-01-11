@@ -1,0 +1,30 @@
+@startuml sequence-update
+title Stock Data Update Sequence
+
+actor User
+participant "Browser" as Browser
+participant "IndexModel" as Page
+participant "StockDataService" as DataSvc
+participant "StockService" as StockSvc
+participant "Alpha Vantage" as API
+database "SQLite" as DB
+
+User -> Browser : Click "Update Data"
+Browser -> Page : POST ?handler=Update
+
+Page -> DataSvc : UpdateFromApiAsync(symbol)
+DataSvc -> StockSvc : GetStockDataAsync()
+StockSvc -> API : GET TIME_SERIES_DAILY
+API --> StockSvc : JSON data
+StockSvc --> DataSvc : List<PricePoint>
+
+DataSvc -> DB : Get existing dates
+DB --> DataSvc : dates
+
+DataSvc -> DataSvc : Filter new points only
+DataSvc -> DB : INSERT new points
+
+DataSvc --> Page : Complete
+Page --> Browser : Redirect
+Browser --> User : Show updated data
+@enduml

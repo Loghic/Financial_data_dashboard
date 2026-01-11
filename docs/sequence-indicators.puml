@@ -1,0 +1,64 @@
+@startuml architecture
+title Market Data Dashboard - High-Level Architecture
+
+skinparam componentStyle rectangle
+
+package "Presentation Layer" {
+  [Web Browser] as Browser
+  [Razor Pages\n(Index, Indicators)] as Pages
+  [Chart.js / DataTables] as Charts
+}
+
+package "Application Layer" {
+  interface "IStockService" as IStockSvc
+  [StockService\n(API Client)] as StockSvc
+  [StockDataService\n(Scoped)] as DataSvc
+  [PredictionService\n(Singleton)] as PredSvc
+  [TechnicalIndicators\n(Static Helper)] as Indicators
+  [CsvExporter\n(Static Helper)] as CsvExp
+}
+
+package "Data Access Layer" {
+  [StockContext\n(EF Core DbContext)] as DbContext
+}
+
+database "SQLite" {
+  [Stocks] as StocksTable
+  [PricePoints] as PriceTable
+}
+
+cloud "External Services" {
+  [Alpha Vantage API] as API
+  [Python Script\n(predict.py)] as Python
+}
+
+Browser --> Pages : HTTP
+Pages --> Charts : Renders
+Pages --> DataSvc : Inject
+Pages --> PredSvc : Inject
+Pages --> Indicators : Calculate
+Pages --> CsvExp : Export CSV
+
+StockSvc ..|> IStockSvc : implements
+DataSvc --> IStockSvc : Inject interface
+DataSvc --> DbContext : Query/Save
+StockSvc --> API : HTTP GET
+
+PredSvc --> DbContext : via IServiceScopeFactory
+PredSvc --> Python : Process.Start\n(stdin/stdout JSON)
+
+DbContext --> StocksTable
+DbContext --> PriceTable
+
+note right of PredSvc
+  Singleton service maintains
+  ConcurrentDictionary for
+  async prediction results
+end note
+
+note right of IStockSvc
+  Interface enables
+  mocking in unit tests
+end note
+
+@enduml
