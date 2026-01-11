@@ -21,7 +21,7 @@ builder.Services.AddHttpClient<IStockService, StockService>(client =>
         "(KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
     );
 })
-.AddTypedClient(client => new StockService(client, alphaVantageKey));
+.AddTypedClient<IStockService>((client, sp) => new StockService(client, alphaVantageKey));
 
 builder.Services.AddScoped<StockDataService>();
 
@@ -49,5 +49,6 @@ app.MapStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();
 
+// Main app loop
 app.Run();
 
