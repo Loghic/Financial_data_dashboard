@@ -1,6 +1,7 @@
 name: Generate PlantUML Diagrams
 
 on:
+  workflow_dispatch:  # Allows manual trigger
   push:
     paths:
       - 'docs/*.puml'
